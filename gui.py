@@ -16,6 +16,13 @@ class MyWidget(QtWidgets.QWidget):
         super().__init__()
 
         self.setWindowTitle("Portscanner GUI")
+
+        self.settings = QtWidgets.QPushButton("Settings")
+        self.settings.setFixedWidth(150)
+        self.settings.clicked.connect(self.settings_clicked)
+        self.settings_layout = QtWidgets.QVBoxLayout()
+        self.settings_layout.addWidget(self.settings)
+       
         
         # IP input section
         self.ip_label = QtWidgets.QLabel("Host IP")
@@ -65,6 +72,7 @@ class MyWidget(QtWidgets.QWidget):
         self.output_field.setFont(QtGui.QFont("Courier", 10))
 
         controls_layout = QtWidgets.QVBoxLayout()
+        controls_layout.addLayout(self.settings_layout)
         controls_layout.addLayout(self.ip_layout)
         controls_layout.addLayout(self.s_port_layout)
         controls_layout.addLayout(self.e_port_layout)
@@ -75,6 +83,60 @@ class MyWidget(QtWidgets.QWidget):
         main_layout = QtWidgets.QHBoxLayout(self)
         main_layout.addLayout(controls_layout)
         main_layout.addWidget(self.output_field, 1)
+
+    def settings_clicked(self):
+        pass  # Placeholder for settings functionality
+        print("Settings clicked")
+        settings_window = QtWidgets.QDialog(self)
+        settings_window.setWindowTitle("Settings")
+        settings_window.setFixedSize(300, 200)
+
+        layout = QtWidgets.QVBoxLayout()
+        
+        nmap_path_label = QtWidgets.QLabel("Nmap Executable Path:")
+        layout.addWidget(nmap_path_label)
+        nmap_path_input = QtWidgets.QLineEdit()
+        nmap_path_input.setText(os.getenv('NMAP', 'C:\\Program Files (x86)\\Nmap\\nmap.exe'))
+        layout.addWidget(nmap_path_input)
+
+        color_scheme_label = QtWidgets.QLabel("Color Scheme:")
+        layout.addWidget(color_scheme_label)
+        color_scheme_input = QtWidgets.QComboBox()
+        color_scheme_input.addItems(["Light", "Dark"])
+        layout.addWidget(color_scheme_input)
+
+        adv_color_set = QtWidgets.QPushButton("Open Advanced Color Settings")
+        adv_color_set.clicked.connect(self.advanced_color_settings)
+        layout.addWidget(adv_color_set)
+
+
+
+        layout.addStretch()
+        save_button = QtWidgets.QPushButton("Save")
+        save_button.clicked.connect(lambda: self.save(color_scheme_input, settings_window, nmap_path_input))
+        layout.addWidget(save_button)
+
+        settings_window.setLayout(layout)
+        settings_window.exec()
+
+    def advanced_color_settings(self):
+        print("Advanced Color Settings clicked")
+
+    def save(self, color_scheme_input, settings_window, nmap_path_input):
+        selected_scheme = color_scheme_input.currentText()
+        print(f"Selected color scheme: {selected_scheme}")
+
+        if selected_scheme == "Dark":
+            app.setStyleSheet("QWidget { background-color: #2b2b2b; color: #f0f0f0; }")
+        if selected_scheme == "Light":
+            app.setStyleSheet("")
+
+        os.environ['NMAP'] = nmap_path_input.text()
+        
+        print(f"Nmap path set to: {os.environ['NMAP']}")
+        
+        settings_window.close()
+        
 
        
 
