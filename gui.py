@@ -121,6 +121,32 @@ class MyWidget(QtWidgets.QWidget):
 
     def advanced_color_settings(self):
         print("Advanced Color Settings clicked")
+        advanced_color_window = QtWidgets.QDialog(self)
+        advanced_color_window.setWindowTitle("Advanced Color Settings")
+        advanced_color_window.setFixedSize(400, 300)
+
+        closed_port_label = QtWidgets.QLabel("Closed Port Color (Hex):")
+        closed_port_input = QtWidgets.QLineEdit()
+        
+        open_port_label = QtWidgets.QLabel("Open Port Color (Hex):")
+        open_port_input = QtWidgets.QLineEdit()
+
+        os_icons = QtWidgets.QCheckBox("Enable OS Icons")
+        os_icons.setChecked(True)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(closed_port_label)
+        layout.addWidget(closed_port_input)
+        layout.addWidget(open_port_label)
+        layout.addWidget(open_port_input)
+        layout.addWidget(os_icons)
+        layout.addStretch()
+        save_button = QtWidgets.QPushButton("Save")
+        save_button.clicked.connect(advanced_color_window.close)
+        layout.addWidget(save_button)
+        advanced_color_window.setLayout(layout)
+        advanced_color_window.exec()
+
 
     def save(self, color_scheme_input, settings_window, nmap_path_input):
         selected_scheme = color_scheme_input.currentText()
