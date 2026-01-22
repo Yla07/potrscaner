@@ -1,8 +1,8 @@
 import os
 import sys
 import threading
-from portscan import port
-from os_scan import check_os
+from scripts.portscan import port
+from scripts.os_scan import check_os
 from PySide6 import QtWidgets, QtGui
 
 def safe_port_scan(host, port_num):
