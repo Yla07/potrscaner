@@ -28,7 +28,7 @@ class MyWidget(QtWidgets.QWidget):
         self.ip_label = QtWidgets.QLabel("Host IP")
         self.ip_input = QtWidgets.QLineEdit()
         self.ip_input.setFixedWidth(150)
-        self.ip_input.setPlaceholderText("Enter host or IP address")
+        self.ip_input.setPlaceholderText("IP address (e.g, 0.0.0.0)")
         
         self.ip_layout = QtWidgets.QHBoxLayout()
         self.ip_layout.addWidget(self.ip_label)
