@@ -4,6 +4,46 @@ import threading
 from scripts.portscan import port
 from scripts.os_scan import check_os
 from PySide6 import QtWidgets, QtGui
+import json
+
+
+def get_config_path():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_dir, "data", "user", "user_settings.json")
+
+
+DEFAULT_SETTINGS = {
+    "open_port_color": "#28a745",
+    "closed_port_color": "#dc3545",
+    "color_scheme": "Light",
+    "nmap_path": "C:\\Program Files (x86)\\Nmap\\nmap.exe",
+}
+
+
+def load_user_settings():
+    settings = dict(DEFAULT_SETTINGS)
+    config_path = get_config_path()
+
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    settings.update(json.loads(content))
+    except Exception as e:
+        print(f"Error loading config from {config_path}: {e}")
+
+    return settings
+
+
+def save_user_settings(settings):
+    config_path = get_config_path()
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    try:
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=4)
+    except Exception as e:
+        print(f"Error saving config to {config_path}: {e}")
 
 def safe_port_scan(host, port_num):
     try:
@@ -14,6 +54,15 @@ def safe_port_scan(host, port_num):
 class MyWidget(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
+
+        self.settings_data = load_user_settings()
+        self.open_port_color = self.settings_data["open_port_color"]
+        self.closed_port_color = self.settings_data["closed_port_color"]
+        self.color_scheme = self.settings_data["color_scheme"]
+        self.nmap_path = self.settings_data["nmap_path"]
+
+        self.apply_color_scheme(self.color_scheme)
+        os.environ['NMAP'] = self.nmap_path
 
         self.setWindowTitle("Portscanner GUI")
 
@@ -85,7 +134,6 @@ class MyWidget(QtWidgets.QWidget):
         main_layout.addWidget(self.output_field, 1)
 
     def settings_clicked(self):
-        pass  # Placeholder for settings functionality
         print("Settings clicked")
         settings_window = QtWidgets.QDialog(self)
         settings_window.setWindowTitle("Settings")
@@ -96,20 +144,19 @@ class MyWidget(QtWidgets.QWidget):
         nmap_path_label = QtWidgets.QLabel("Nmap Executable Path:")
         layout.addWidget(nmap_path_label)
         nmap_path_input = QtWidgets.QLineEdit()
-        nmap_path_input.setText(os.getenv('NMAP', 'C:\\Program Files (x86)\\Nmap\\nmap.exe'))
+        nmap_path_input.setText(self.nmap_path)
         layout.addWidget(nmap_path_input)
 
         color_scheme_label = QtWidgets.QLabel("Color Scheme:")
         layout.addWidget(color_scheme_label)
         color_scheme_input = QtWidgets.QComboBox()
         color_scheme_input.addItems(["Light", "Dark"])
+        color_scheme_input.setCurrentText(self.color_scheme)
         layout.addWidget(color_scheme_input)
 
         adv_color_set = QtWidgets.QPushButton("Open Advanced Color Settings")
         adv_color_set.clicked.connect(self.advanced_color_settings)
         layout.addWidget(adv_color_set)
-
-
 
         layout.addStretch()
         save_button = QtWidgets.QPushButton("Save")
@@ -127,41 +174,80 @@ class MyWidget(QtWidgets.QWidget):
 
         closed_port_label = QtWidgets.QLabel("Closed Port Color (Hex):")
         closed_port_input = QtWidgets.QLineEdit()
+        closed_port_input.setText(self.closed_port_color)
         
         open_port_label = QtWidgets.QLabel("Open Port Color (Hex):")
         open_port_input = QtWidgets.QLineEdit()
-
-        os_icons = QtWidgets.QCheckBox("Enable OS Icons")
-        os_icons.setChecked(True)
+        open_port_input.setText(self.open_port_color)
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(closed_port_label)
         layout.addWidget(closed_port_input)
         layout.addWidget(open_port_label)
         layout.addWidget(open_port_input)
-        layout.addWidget(os_icons)
         layout.addStretch()
         save_button = QtWidgets.QPushButton("Save")
-        save_button.clicked.connect(advanced_color_window.close)
+        save_button.clicked.connect(
+            lambda: self.save_colors(advanced_color_window, open_port_input, closed_port_input)
+        )
         layout.addWidget(save_button)
         advanced_color_window.setLayout(layout)
         advanced_color_window.exec()
+
+
+    @staticmethod
+    def _normalize_color(value, fallback):
+        text = value.strip()
+        if text.startswith('#') and len(text) == 7:
+            return text
+        return fallback
+
+
+    def save_colors(self, dialog, open_input, closed_input):
+        self.open_port_color = self._normalize_color(open_input.text(), self.open_port_color)
+        self.closed_port_color = self._normalize_color(closed_input.text(), self.closed_port_color)
+
+        self.settings_data.update(
+            {
+                "open_port_color": self.open_port_color,
+                "closed_port_color": self.closed_port_color,
+                "color_scheme": self.color_scheme,
+                "nmap_path": self.nmap_path,
+            }
+        )
+        save_user_settings(self.settings_data)
+        dialog.close()
 
 
     def save(self, color_scheme_input, settings_window, nmap_path_input):
         selected_scheme = color_scheme_input.currentText()
         print(f"Selected color scheme: {selected_scheme}")
 
-        if selected_scheme == "Dark":
-            app.setStyleSheet("QWidget { background-color: #2b2b2b; color: #f0f0f0; }")
-        if selected_scheme == "Light":
-            app.setStyleSheet("")
+        self.apply_color_scheme(selected_scheme)
+        self.color_scheme = selected_scheme
 
-        os.environ['NMAP'] = nmap_path_input.text()
-        
+        self.nmap_path = nmap_path_input.text()
+        os.environ['NMAP'] = self.nmap_path
         print(f"Nmap path set to: {os.environ['NMAP']}")
-        
+
+        self.settings_data.update(
+            {
+                "open_port_color": self.open_port_color,
+                "closed_port_color": self.closed_port_color,
+                "color_scheme": self.color_scheme,
+                "nmap_path": self.nmap_path,
+            }
+        )
+        save_user_settings(self.settings_data)
+
         settings_window.close()
+
+
+    def apply_color_scheme(self, scheme):
+        if scheme == "Dark":
+            app.setStyleSheet("QWidget { background-color: #2b2b2b; color: #f0f0f0; }")
+        else:
+            app.setStyleSheet("QWidget { background-color: #ffffff; color: #000000; }")
         
 
        
@@ -206,8 +292,8 @@ class MyWidget(QtWidgets.QWidget):
                 if results == False:
                     closed_ports += 1
                 else:
-                    self.output_field.append("<span style = 'background-color: #0f752a; color: white;'>Port "+str(results[0])+" is open</span> <span style = 'background-color: black; color: white;'> "+str(results[1])+" </span>")
-            self.output_field.append(f"There are {closed_ports} closed ports")
+                    self.output_field.append(f"<span style = 'background-color: {self.open_port_color}; color: white;'>Port {results[0]} is open</span> <span style = 'background-color: black; color: white;'> {results[1]} </span>")
+            self.output_field.append(f"<span style='background-color: {self.closed_port_color}; color: white;'>There are {closed_ports} closed ports</span>")
         else:
             self.output_field.append("<span style='background-color: red; color: white;'>Host is down.🖕</span>")
 
