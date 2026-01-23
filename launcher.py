@@ -1,7 +1,37 @@
-from scripts.os_scan import check_os
-from scripts.portscan import port
 import os 
 import sys
+import json
+
+# Initialize user settings before any GUI imports
+def initialize_settings():
+    """Initialize user settings before app startup"""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(base_dir, "data", "user", "user_settings.json")
+    
+    default_settings = {
+        "open_port_color": "#28a745",
+        "closed_port_color": "#dc3545",
+        "color_scheme": "Light",
+        "nmap_path": "C:\\Program Files (x86)\\Nmap\\nmap.exe",
+    }
+    
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    
+    # Check if file exists and has content
+    file_has_content = os.path.exists(config_path) and os.path.getsize(config_path) > 0
+    
+    if not file_has_content:
+        try:
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(default_settings, f, indent=4)
+            print(f"✓ Config file initialized at {config_path}")
+        except Exception as e:
+            print(f"✗ Error creating config file: {e}")
+
+initialize_settings()
+
+from scripts.os_scan import check_os
+from scripts.portscan import port
 
 try:
     from PySide6 import QtWidgets, QtGui

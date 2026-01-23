@@ -1,16 +1,10 @@
 import os
 import sys
 import threading
+import json
+from PySide6 import QtWidgets, QtGui
 from scripts.portscan import port
 from scripts.os_scan import check_os
-from PySide6 import QtWidgets, QtGui
-import json
-
-
-def get_config_path():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base_dir, "data", "user", "user_settings.json")
-
 
 DEFAULT_SETTINGS = {
     "open_port_color": "#28a745",
@@ -18,6 +12,33 @@ DEFAULT_SETTINGS = {
     "color_scheme": "Light",
     "nmap_path": "C:\\Program Files (x86)\\Nmap\\nmap.exe",
 }
+
+
+def get_config_path():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_dir, "data", "user", "user_settings.json")
+
+
+def ensure_config_exists():
+    """Create config file with default settings if it doesn't exist or is empty"""
+    config_path = get_config_path()
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    
+    # Check if file exists and has content
+    file_exists = os.path.exists(config_path)
+    file_has_content = file_exists and os.path.getsize(config_path) > 0
+    
+    if not file_has_content:
+        try:
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(DEFAULT_SETTINGS, f, indent=4)
+            print(f"✓ Config file initialized at {config_path}")
+        except Exception as e:
+            print(f"✗ Error creating config file: {e}")
+
+
+# Initialize config on import
+ensure_config_exists()
 
 
 def load_user_settings():
@@ -45,11 +66,11 @@ def save_user_settings(settings):
     except Exception as e:
         print(f"Error saving config to {config_path}: {e}")
 
-def safe_port_scan(host, port_num):
+def safe_port_scan(host, port_num, nmap_path=None):
     try:
-        return port(host, port_num)  # Indicate success
-    except Exception as e:
-        return False  # Indicate failure
+        return port(host, port_num, nmap_path)
+    except Exception as e:  # pragma: no cover - defensive
+        return {"error": str(e)}
 
 class MyWidget(QtWidgets.QWidget):
     def __init__(self):
@@ -134,7 +155,6 @@ class MyWidget(QtWidgets.QWidget):
         main_layout.addWidget(self.output_field, 1)
 
     def settings_clicked(self):
-        print("Settings clicked")
         settings_window = QtWidgets.QDialog(self)
         settings_window.setWindowTitle("Settings")
         settings_window.setFixedSize(300, 200)
@@ -167,7 +187,6 @@ class MyWidget(QtWidgets.QWidget):
         settings_window.exec()
 
     def advanced_color_settings(self):
-        print("Advanced Color Settings clicked")
         advanced_color_window = QtWidgets.QDialog(self)
         advanced_color_window.setWindowTitle("Advanced Color Settings")
         advanced_color_window.setFixedSize(400, 300)
@@ -221,14 +240,11 @@ class MyWidget(QtWidgets.QWidget):
 
     def save(self, color_scheme_input, settings_window, nmap_path_input):
         selected_scheme = color_scheme_input.currentText()
-        print(f"Selected color scheme: {selected_scheme}")
-
         self.apply_color_scheme(selected_scheme)
         self.color_scheme = selected_scheme
 
         self.nmap_path = nmap_path_input.text()
         os.environ['NMAP'] = self.nmap_path
-        print(f"Nmap path set to: {os.environ['NMAP']}")
 
         self.settings_data.update(
             {
@@ -276,7 +292,7 @@ class MyWidget(QtWidgets.QWidget):
         if res == 0:
             self.output_field.append("<span style='background-color: green; color: white;'>"+f"{host} is up"+"</span>")
             if self.os_scan_checkbox.isChecked():
-                os_info = check_os(host)
+                os_info = check_os(host, self.nmap_path)
                 if os_info:
                     if os_info == "Linux":
                         os_info += " 🐧"
@@ -288,8 +304,11 @@ class MyWidget(QtWidgets.QWidget):
                 else:
                     self.output_field.append("Operating System: Unknown")
             for port_num in range(start_port, end_port + 1):
-                results = safe_port_scan(host, port_num)
-                if results == False:
+                results = safe_port_scan(host, port_num, self.nmap_path)
+                if isinstance(results, dict) and "error" in results:
+                    self.output_field.append(f"<span style='background-color: red; color: white;'>Error scanning port {port_num}: {results['error']}</span>")
+                    continue
+                if results is False:
                     closed_ports += 1
                 else:
                     self.output_field.append(f"<span style = 'background-color: {self.open_port_color}; color: white;'>Port {results[0]} is open</span> <span style = 'background-color: black; color: white;'> {results[1]} </span>")
