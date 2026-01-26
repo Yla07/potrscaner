@@ -3,7 +3,9 @@
 This is a simple nmap ui for nmap port scanning. It requires nmap installed to work.
 There are two versions of the program gui and cli.
 
-Program currently works only on Windows but will have linux version in the future
+Program currently works only on Windows but will have linux version in the future.
+
+***Launcher is work in progges so it doesnt work***
 
 ## GUI 
 This section describes the features of the GUI version of the app.
