@@ -5,6 +5,7 @@ import json
 from PySide6 import QtWidgets, QtGui
 from scripts.portscan import port
 from scripts.os_scan import check_os
+import nmap as nm
 
 DEFAULT_SETTINGS = {
     "open_port_color": "#28a745",

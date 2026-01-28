@@ -3,6 +3,7 @@ import os
 import json
 from scripts.portscan import port
 from scripts.os_scan import check_os
+import nmap as nm
 
 DEFAULT_SETTINGS = {
     "open_port_color": "#28a745",
