@@ -14,6 +14,13 @@ DEFAULT_SETTINGS = {
     "nmap_path": "C:\\Program Files (x86)\\Nmap\\nmap.exe",
 }
 
+def _log_event(message: str):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    log_path = os.path.join(base_dir, "data", "user", "app.log")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(message + "\n")
+
 
 def get_config_path():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -33,10 +40,9 @@ def ensure_config_exists():
         try:
             with open(config_path, "w", encoding="utf-8") as f:
                 json.dump(DEFAULT_SETTINGS, f, indent=4)
-            print(f"✓ Config file initialized at {config_path}")
+            _log_event(f"Config file initialized at {config_path}")
         except Exception as e:
             print(f"✗ Error creating config file: {e}")
-
 
 # Initialize config on import
 ensure_config_exists()
